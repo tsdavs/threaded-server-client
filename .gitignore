@@ -1,0 +1,6 @@
+.idea/*
+100_megabyte_file.txt
+100_megabyte_file_out.txt
+out/*
+*.iml
+*.zip
