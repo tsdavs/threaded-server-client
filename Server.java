@@ -4,63 +4,73 @@ import java.net.Socket;
 
 public class Server
 {
-    private static final String ONE_HUNDRED_MEGABYTE_FILE = "100_megabyte_file_out.txt";
+    private ServerSocket serverSocket;
+
+    private Server()
+    {
+        try {
+            serverSocket = new ServerSocket(61174);
+
+            System.out.println("Server running");
+        } catch (IOException ioe){
+            ioe.printStackTrace();
+        }
+
+        while(true){
+            try{
+                Socket clientSocket = serverSocket.accept();
+
+                ServerThread serviceThread = new ServerThread(clientSocket);
+
+                serviceThread.start();
+            } catch (IOException ioe){
+                ioe.printStackTrace();
+            }
+        }
+    }
 
     public static void main(String [] args)
     {
         new Server();
     }
+}
 
-    public Server()
-    {
-        System.out.println("Server running");
-        ServerSocket serverSocket = null;
-        Socket connection = null;
-        InputStream inputStream = null;
-        FileOutputStream fileOutputStream;
-        BufferedOutputStream bufferedOutputStream = null;
+class ServerThread extends Thread{
+    private Socket clientSocket;
 
-        try {
-            serverSocket = new ServerSocket(61174); // Binds to the server port
+    ServerThread(Socket s){
+        clientSocket = s;
+    }
 
-            while(true)
-            {
-                connection = serverSocket.accept(); // Create a connection between server and client
-                System.out.println("Accepted Client");
-                inputStream = connection.getInputStream(); // Access the read stream
-                byte [] buffer = new byte[1024];
-                int bytesRead;
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread().getId() + " " + clientSocket);
 
-                File file = new File(ONE_HUNDRED_MEGABYTE_FILE);
-                fileOutputStream = new FileOutputStream(file);
-                bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+        try{
+            InputStream inputStream = clientSocket.getInputStream(); // Access the read stream
 
-                /* Reads and write the byte stream from the client onto the server disk */
-                do
-                {
-                    bytesRead = inputStream.read(buffer, 0, buffer.length);
+            byte [] buffer = new byte[1024];
 
-                    if(bytesRead <= 0)
-                        break;
+            String ONE_HUNDRED_MEGABYTE_FILE = "100_megabyte_file_out(" + Thread.currentThread().getId() + ").txt";
 
-                    bufferedOutputStream.write(buffer, 0, bytesRead);
-                    bufferedOutputStream.flush();
-                }
-                while (true);
+            File file = new File(ONE_HUNDRED_MEGABYTE_FILE);
+            FileOutputStream fileOutputStream = new FileOutputStream(file);
+            BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+
+            int len;
+
+            while ((len = inputStream.read(buffer)) > 0) {
+                bufferedOutputStream.write(buffer, 0, len);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        finally
-        {
-            try {
-                bufferedOutputStream.close();
-                inputStream.close();
-                connection.close();
-                serverSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+
+            bufferedOutputStream.flush();
+            bufferedOutputStream.close();
+            inputStream.close();
+
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
         }
     }
 }
+
+
